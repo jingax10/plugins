@@ -158,7 +158,7 @@ func setupHostVeth(vethName string, proxyL2 bool, result *current.Result) error 
 		}
 
 		if proxyL2 {
-			switch ipv.Version {
+			switch ipc.Version {
 			case "4":
 				// Enable IPv4 ARP proxy for hostVeth.
 				if _, err = sysctl.Sysctl(fmt.Sprintf("net.ipv4.conf.%s.proxy_arp", vethName), "1"); err != nil {
@@ -166,12 +166,16 @@ func setupHostVeth(vethName string, proxyL2 bool, result *current.Result) error 
 				}
 				// Set proxy ARP response delay to be zero for hostVeth.
 				if _, err = sysctl.Sysctl(fmt.Sprintf("net.ipv4.neigh.%s.proxy_delay", vethName), "0"); err != nil {
-					return fmt.Errorf("failed to set proxy_delay on interface %q: %v", vethName, err)
+					return fmt.Errorf("failed to set proxy_delay=0 on interface %q: %v", vethName, err)
 				}
 			case "6":
 				// Enable IPv6 NDP proxy for hostVeth.
 				if _, err = sysctl.Sysctl(fmt.Sprintf("net.ipv6.conf.%s.proxy_ndp", vethName), "1"); err != nil {
 					return fmt.Errorf("failed to set proxy_ndp on interface %q: %v", vethName, err)
+				}
+				// Set proxy NDP response delay to be zero for hostVeth.
+				if _, err = sysctl.Sysctl(fmt.Sprintf("net.ipv6.neigh.%s.proxy_delay", vethName), "0"); err != nil {
+					return fmt.Errorf("failed to set proxy_delay=0 on interface %q: %v", vethName, err)
 				}
 			default:
 				return fmt.Errorf("unknown IP protocol version: %q", ipc.Version)
@@ -236,7 +240,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
-	if err = setupHostVeth(hostInterface.Name, result); err != nil {
+	if err = setupHostVeth(hostInterface.Name, conf.ProxyL2, result); err != nil {
 		return err
 	}
 
